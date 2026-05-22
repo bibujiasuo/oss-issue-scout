@@ -18,7 +18,7 @@ def build_parser() -> argparse.ArgumentParser:
     search_parser.add_argument("--label")
     search_parser.add_argument("--updated-days", type=int)
     search_parser.add_argument("--repo-updated-days", type=int)
-    search_parser.add_argument("--limit", type=int, default=10)
+    search_parser.add_argument("--limit", type=_positive_int, default=10)
     search_parser.add_argument(
         "--format",
         choices=("table", "markdown", "json"),
@@ -26,6 +26,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
     search_parser.set_defaults(func=_run_search)
     return parser
+
+
+def _positive_int(value: str) -> int:
+    parsed = int(value)
+    if parsed <= 0:
+        raise argparse.ArgumentTypeError("must be greater than 0")
+    return parsed
 
 
 def _run_search(args: argparse.Namespace) -> int:

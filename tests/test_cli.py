@@ -52,6 +52,15 @@ class CliTests(unittest.TestCase):
         self.assertEqual(exit_code, 1)
         self.assertIn("rate limited", stderr.getvalue())
 
+    def test_search_rejects_non_positive_limit(self) -> None:
+        stderr = io.StringIO()
+
+        with self.assertRaises(SystemExit) as raised, contextlib.redirect_stderr(stderr):
+            main(["search", "--limit", "0"])
+
+        self.assertEqual(raised.exception.code, 2)
+        self.assertIn("must be greater than 0", stderr.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -44,6 +44,9 @@ def search_issues(
     repo_updated_days: int | None = None,
     limit: int = 10,
 ) -> list[Issue]:
+    if limit <= 0:
+        return []
+
     effective_stars_min = max(stars_min or DEFAULT_STARS_MIN, DEFAULT_STARS_MIN)
 
     query = _build_issue_query(

@@ -50,6 +50,13 @@ class SearchIssuesTests(unittest.TestCase):
 
         self.assertEqual([issue.repo for issue in issues], ["example/one", "example/two"])
 
+    def test_non_positive_limit_returns_no_results_without_api_call(self) -> None:
+        with patch("oss_issue_scout.github_api._request_json") as request_json:
+            issues = search_issues(language="python", limit=0)
+
+        self.assertEqual(issues, [])
+        request_json.assert_not_called()
+
 
 def _fake_request_json(path: str, params: dict[str, str] | None = None) -> dict:
     if (
