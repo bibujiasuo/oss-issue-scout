@@ -1,5 +1,7 @@
 # oss-issue-scout
 
+[![PyPI](https://img.shields.io/pypi/v/oss-issue-scout.svg)](https://pypi.org/project/oss-issue-scout/)
+
 Find worthwhile open-source issues
 
 The current version calls the GitHub API, searches open issues, and applies a simple score based on repository activity, issue activity, comments, labels, and related signals.
@@ -18,7 +20,7 @@ It is currently aimed at junior to intermediate developers who want a faster way
 ## Usage
 
 ```powershell
-python -m pip install -e .
+pip install oss-issue-scout
 oss-issue-scout search --language python --label "good first issue" --limit 5
 ```
 

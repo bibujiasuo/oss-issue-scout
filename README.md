@@ -1,5 +1,7 @@
 # oss-issue-scout
 
+[![PyPI](https://img.shields.io/pypi/v/oss-issue-scout.svg)](https://pypi.org/project/oss-issue-scout/)
+
 发现值得贡献的开源 issues
 
 [English README](README.en.md)
@@ -20,7 +22,7 @@
 ## 使用
 
 ```powershell
-python -m pip install -e .
+pip install oss-issue-scout
 oss-issue-scout search --language python --label "good first issue" --limit 5
 ```
 
