@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from .github_api import Issue
+from . import scoring_presets
 
 
 @dataclass(frozen=True)
@@ -13,71 +14,42 @@ class ScoredIssue:
     warnings: tuple[str, ...]
 
 
-def score_issue(issue: Issue) -> ScoredIssue:
+def in_range(value: int, min: int, max: int | None):
+    return min <= value and (max is None or value <= max)
+
+
+def score_issue(issue: Issue, preset: dict | None = None) -> ScoredIssue:
 
     score = 50
     reasons: list[str] = []
     warnings: list[str] = []
+    
+    if preset is None:
+        preset = scoring_presets.default
 
-    if issue.stars >= 100_000:
-        score -= 15
-        warnings.append("very large repo may be competitive")
-    elif issue.stars >= 50_000:
-        score -= 10
-        warnings.append("large repo may be competitive")
-    elif issue.stars >= 10_000:
-        score += 15
-        reasons.append("active repo")
-    elif issue.stars >= 5_000:
-        score += 10
-        reasons.append("moderately active repo")
-    elif issue.stars >= 500:
-        score += 5
-        reasons.append("somewhat active repo")
+    for factor_name, rules in preset.items():
+        if factor_name == "special_rules":
+            continue
 
+        value = getattr(issue, factor_name)
 
-    if issue.updated_days <= 1:
-        score += 15
-        reasons.append("issue updated today")
-    elif issue.updated_days <= 3:
-        score += 10
-        reasons.append("issue updated in the last 3 days")
-    elif issue.updated_days <= 14:
-        score += 5
-        reasons.append("issue updated in the last 2 weeks")
-    elif issue.updated_days > 30:
-        score -= 20
-        warnings.append("issue looks stale")
+        for rule in rules:
+            if in_range(value, rule.minimum, rule.maximum):
+                score += rule.score_delta
 
+                if rule.rule_type == "reason":
+                    reasons.append(rule.message)
+                elif rule.rule_type == "warning":
+                    warnings.append(rule.message)
 
-    if issue.repo_last_issue_updated_days <= 3:
-        score += 30
-        reasons.append("repo issue activity in the last 3 days")
-    elif issue.repo_last_issue_updated_days <= 7:
-        score += 15
-        reasons.append("repo issue activity this week")
-    elif issue.repo_last_issue_updated_days <= 14:
-        score -= 5
-        warnings.append("repo issue activity is slowing")
-    elif issue.repo_last_issue_updated_days <= 30:
-        score -= 30
-        warnings.append("repo issue activity looks stale")
-    elif issue.repo_last_issue_updated_days > 30:
-        score -= 40
-        warnings.append("repo issue activity is stale")
+    for rule in preset["special_rules"]:
+        if rule.labels_any.intersection(issue.labels) and issue.repo_beginner_issue_count >= rule.repo_beginner_issue_count_min:
+            score += rule.score_delta
 
-
-    beginner_labels = {"good first issue", "help wanted"}
-    if beginner_labels.intersection(issue.labels) and issue.repo_beginner_issue_count >= 3:
-        score += 10
-        reasons.append("welcoming label")
-
-    if issue.comments <= 1:
-        score += 15
-        reasons.append("low discussion volume")
-    elif issue.comments >= 5:
-        score -= 15
-        warnings.append("long discussion")
+            if rule.rule_type == "reason":
+                reasons.append(rule.message)
+            elif rule.rule_type == "warning":
+                warnings.append(rule.message)
 
     return ScoredIssue(
         issue=issue,
@@ -87,10 +59,25 @@ def score_issue(issue: Issue) -> ScoredIssue:
     )
 
 
-def score_issues(issues: list[Issue]) -> list[ScoredIssue]:
+
+def score_issues(issues: list[Issue], preset: str | None = None) -> list[ScoredIssue]:
+    if preset is None:
+        preset_obj = scoring_presets.default
+    elif isinstance(preset, str):
+        preset_map = {
+            "default": scoring_presets.default,
+            "junior": scoring_presets.junior,
+            "intermediate": scoring_presets.intermediate,
+            "senior": scoring_presets.senior,
+        }
+
+        try:
+            preset_obj = preset_map[preset]
+        except KeyError as exc:
+            raise ValueError(f"unknown preset: {preset}") from exc
 
     return sorted(
-        (score_issue(issue) for issue in issues),
+        (score_issue(issue, preset=preset_obj) for issue in issues),
         key=lambda scored: scored.score,
         reverse=True,
     )
