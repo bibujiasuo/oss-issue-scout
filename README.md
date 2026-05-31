@@ -45,7 +45,10 @@ oss-issue-scout search --language python --limit 5
 
 https://yong-yuan-x.github.io/oss-issue-scout/
 
-GitHub Pages 版本会在浏览器中直接请求 GitHub API。可选的 GitHub Token 只会发送给 `api.github.com`，不会保存到页面里。
+GitHub Pages 版本是静态试用版，会在浏览器中直接请求 GitHub API，并在前端做轻量评分。
+它不运行 Python 后端，因此搜索深度和排序结果可能与 CLI / 本地 Web 后端有较大差异。
+如果想用WEB比较完善的评分，请还是在项目中去运行。这个计划后期会做PAGE同步后端的逻辑。
+可选的 GitHub Token 只会发送给 `api.github.com`，不会保存到页面里。
 
 本地运行 Web 页面需要安装可选 Web 依赖：
 
@@ -115,7 +118,7 @@ python -m unittest discover
 
 ## 后续
 
-现在项目使用的人还比较少，如果你觉得它对你有帮助，欢迎点一个 ⭐。达到 16+ ⭐ 后会开启 Discussions
+现在项目使用的人还比较少，如果你觉得它对你有帮助，欢迎点一个 ⭐。达到 128+ ⭐ 后会开启 Discussions
 
 如果有改进建议或使用问题，可以在 issues 中提出
 
