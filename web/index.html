@@ -2113,9 +2113,7 @@ document.addEventListener('DOMContentLoaded', function() {
         token
       };
       let issues;
-      if (token) {
-        issues = await searchWithGitHubApi(options);
-      } else if (shouldUseLocalApi()) {
+      if (shouldUseLocalApi()) {
         try {
           issues = await searchWithLocalApi(options);
         } catch (localApiError) {
