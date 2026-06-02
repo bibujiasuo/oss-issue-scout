@@ -41,10 +41,6 @@ oss-issue-scout search --language python --limit 5
 
 ## Web 页面
 
-可以直接打开在线版：
-
-https://yong-yuan-x.github.io/oss-issue-scout/
-
 GitHub Pages 版本是静态试用版，会在浏览器中直接请求 GitHub API，并在前端做轻量评分。
 它不运行 Python 后端，因此搜索深度和排序结果可能与 CLI / 本地 Web 后端有较大差异。
 如果想用WEB比较完善的评分，请还是在项目中去运行。这个计划后期会做PAGE同步后端的逻辑。
