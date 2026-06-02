@@ -5,8 +5,6 @@
 
 发现值得贡献的开源 issues
 
-[English README](README.md)
-
 当前版本会调用 GitHub API 搜索 open issues，并根据项目活跃度、issue 活跃度、评论数量、标签等信号做一个简单评分
 它主要面向初中级开发者，用来快速筛出更可能适合贡献的 issue
 
@@ -120,7 +118,7 @@ python -m unittest discover
 
 后续会逐步进行版本迭代，继续优化推荐质量和使用体验
 
-## 贡献者
+## 感谢贡献者
 
 <a href="https://github.com/Yong-yuan-X/oss-issue-scout/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=Yong-yuan-X/oss-issue-scout" alt="Contributors" />
