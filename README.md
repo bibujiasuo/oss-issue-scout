@@ -41,10 +41,6 @@ This example usually returns results in about 15 seconds.
 
 ## Web UI
 
-Open the hosted web app directly:
-
-https://yong-yuan-x.github.io/oss-issue-scout/
-
 The GitHub Pages version is a static trial version. It calls the GitHub API directly from your browser and applies a lightweight score in the frontend.
 It does not run the Python backend, so search depth and sorting results may differ significantly from the CLI / local web backend.
 If you want the more complete web scoring, run the project locally. A future update is planned to sync the Pages version with the backend logic.
