@@ -120,7 +120,7 @@ If you have suggestions or run into problems, please open an issue.
 
 Future versions will continue to improve recommendation quality and usability.
 
-## Contributors
+## Thanks Contributors
 
 <a href="https://github.com/Yong-yuan-X/oss-issue-scout/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=Yong-yuan-X/oss-issue-scout" alt="Contributors" />
