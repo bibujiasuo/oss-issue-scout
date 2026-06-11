@@ -25,7 +25,7 @@ pip install oss-issue-scout
 oss-issue-scout search --language python --label "good first issue" --limit 5
 ```
 
-建议用 GitHub token，这样比匿名搜索快3倍且不容易遇到限流，可以先设置环境变量：
+建议用 GitHub token，这样比匿名搜索快得多且不容易遇到限流，可以先设置环境变量：
 
 ```powershell
 $env:GITHUB_TOKEN="your_github_token"
@@ -35,7 +35,6 @@ $env:GITHUB_TOKEN="your_github_token"
 oss-issue-scout search --language python --limit 5
 ```
 
-该示例大约 15 秒返回结果
 
 ## Web 页面
 
