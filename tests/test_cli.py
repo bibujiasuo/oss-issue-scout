@@ -607,6 +607,7 @@ class CliTests(unittest.TestCase):
 
         self.assertEqual(exit_code, 0)
         output = stdout.getvalue()
+        self.assertIn("Included", output)
         self.assertNotIn("Excluded", output)
 
     def test_search_excludes_repos_from_backfill(self) -> None:

@@ -84,11 +84,13 @@ query SearchIssues($query: String!, $first: Int!, $after: String) {
 
 
 class GitHubAPIError(RuntimeError):
-    pass
+    """Raised when a GitHub API request fails."""
 
 
 @dataclass(frozen=True)
 class Issue:
+    """Represents a GitHub issue with repository metadata used for scoring."""
+
     repo: str
     title: str
     url: str
@@ -105,6 +107,8 @@ class Issue:
 
 @dataclass(frozen=True)
 class IssueSearchResult:
+    """Holds the results of an issue search along with pagination status."""
+
     issues: list[Issue]
     exhausted: bool
     page_limit_reached: bool = False
@@ -120,6 +124,7 @@ def search_issues(
     exclude_repos: tuple[str, ...] = (),
     limit: int = 10,
 ) -> list[Issue]:
+    """Search GitHub issues and return a flat list, delegating to search_issue_candidates."""
     return search_issue_candidates(
         language=language,
         stars_min=stars_min,
@@ -144,7 +149,8 @@ def search_issue_candidates(
     max_pages: int | None = None,
     page_size: int | None = None,
 ) -> IssueSearchResult:
-    exclude_repos_lower = {repo.casefold() for repo in exclude_repos}
+    """Search GitHub issues using GraphQL (preferred) or REST, excluding specified repos."""
+    exclude_repos_lower = {repo.strip().casefold() for repo in exclude_repos if repo.strip()}
     if _get_token():
         try:
             return _search_issue_candidates_graphql(
@@ -191,9 +197,11 @@ def backfill_issue_candidates(
     per_page: int = BACKFILL_PER_PAGE,
     page: int = 1,
 ) -> list[Issue]:
+    """Fetch additional issue candidates for a single repository via the REST search API."""
     if not repo or per_page <= 0 or page <= 0:
         return []
-    if repo.casefold() in {r.casefold() for r in exclude_repos}:
+    exclude_lower = {r.strip().casefold() for r in exclude_repos if r.strip()}
+    if repo.strip().casefold() in exclude_lower:
         _debug(f"repo backfill skipped excluded repo={repo}")
         return []
 
@@ -271,6 +279,7 @@ def _search_issue_candidates_graphql(
     max_pages: int | None = None,
     page_size: int | None = None,
 ) -> IssueSearchResult:
+    """Search GitHub issues via the GraphQL API, filtering out excluded repos."""
     if limit <= 0 or (max_pages is not None and max_pages <= 0):
         return IssueSearchResult(issues=[], exhausted=True)
 
@@ -386,6 +395,7 @@ def _search_issue_candidates_graphql(
 
 
 def _issue_from_graphql_node(node: Any) -> Issue | None:
+    """Convert a GraphQL search result node into an Issue, or None if the node is invalid."""
     if not isinstance(node, dict):
         return None
     repository = node.get("repository")
@@ -426,6 +436,7 @@ def _search_issue_candidates_rest(
     max_pages: int | None = None,
     page_size: int | None = None,
 ) -> IssueSearchResult:
+    """Search GitHub issues via the REST API, filtering out excluded repos."""
     if limit <= 0 or (max_pages is not None and max_pages <= 0):
         return IssueSearchResult(issues=[], exhausted=True)
 
@@ -788,6 +799,7 @@ def _build_issue_query(
     exclude_repos: set[str] = frozenset(),
     sort_updated_desc: bool = False,
 ) -> str:
+    """Build a GitHub search query string with optional filters and repo exclusions."""
     parts = ["is:issue", "is:open", "archived:false", "-linked:pr", "no:assignee"]
     if query:
         parts.append(_quote_query_value(query))
@@ -814,6 +826,7 @@ def _build_repo_issue_query(
     label: str | None,
     updated_days: int | None,
 ) -> str:
+    """Build a GitHub search query string scoped to a single repository."""
     parts = [
         f"repo:{repo}",
         "is:issue",
