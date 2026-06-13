@@ -117,6 +117,7 @@ def search_issues(
     label: str | None = None,
     updated_days: int | None = None,
     repo_updated_days: int | None = None,
+    exclude_repos: tuple[str, ...] = (),
     limit: int = 10,
 ) -> list[Issue]:
     return search_issue_candidates(
@@ -125,6 +126,7 @@ def search_issues(
         label=label,
         updated_days=updated_days,
         repo_updated_days=repo_updated_days,
+        exclude_repos=exclude_repos,
         limit=limit,
     ).issues
 
@@ -137,10 +139,12 @@ def search_issue_candidates(
     label: str | None = None,
     updated_days: int | None = None,
     repo_updated_days: int | None = None,
+    exclude_repos: tuple[str, ...] = (),
     limit: int = 10,
     max_pages: int | None = None,
     page_size: int | None = None,
 ) -> IssueSearchResult:
+    exclude_repos_lower = {repo.casefold() for repo in exclude_repos}
     if _get_token():
         try:
             return _search_issue_candidates_graphql(
@@ -150,6 +154,7 @@ def search_issue_candidates(
                 label=label,
                 updated_days=updated_days,
                 repo_updated_days=repo_updated_days,
+                exclude_repos=exclude_repos_lower,
                 limit=limit,
                 max_pages=max_pages,
                 page_size=page_size,
@@ -166,6 +171,7 @@ def search_issue_candidates(
         label=label,
         updated_days=updated_days,
         repo_updated_days=repo_updated_days,
+        exclude_repos=exclude_repos_lower,
         limit=limit,
         max_pages=max_pages,
         page_size=page_size,
@@ -181,10 +187,14 @@ def backfill_issue_candidates(
     label: str | None = None,
     updated_days: int | None = None,
     repo_updated_days: int | None = None,
+    exclude_repos: tuple[str, ...] = (),
     per_page: int = BACKFILL_PER_PAGE,
     page: int = 1,
 ) -> list[Issue]:
     if not repo or per_page <= 0 or page <= 0:
+        return []
+    if repo.casefold() in {r.casefold() for r in exclude_repos}:
+        _debug(f"repo backfill skipped excluded repo={repo}")
         return []
 
     effective_stars_min = max(stars_min or DEFAULT_STARS_MIN, DEFAULT_STARS_MIN)
@@ -231,6 +241,7 @@ def backfill_issue_candidates(
             repo_activity_cache=repo_activity_cache,
             repo_open_issue_count_cache=repo_open_issue_count_cache,
             repo_beginner_issue_count_cache=repo_beginner_issue_count_cache,
+            exclude_repos=frozenset(),
             language=language,
             stars_min=effective_stars_min,
             repo_updated_days=repo_updated_days,
@@ -255,6 +266,7 @@ def _search_issue_candidates_graphql(
     label: str | None = None,
     updated_days: int | None = None,
     repo_updated_days: int | None = None,
+    exclude_repos: set[str] = frozenset(),
     limit: int = 10,
     max_pages: int | None = None,
     page_size: int | None = None,
@@ -269,6 +281,7 @@ def _search_issue_candidates_graphql(
         stars_min=effective_stars_min,
         label=label,
         updated_days=updated_days,
+        exclude_repos=exclude_repos,
         sort_updated_desc=True,
     )
     issues: list[Issue] = []
@@ -323,6 +336,9 @@ def _search_issue_candidates_graphql(
                 and issue.repo_last_issue_updated_days > repo_updated_days
             ):
                 skipped["repo_activity"] += 1
+                continue
+            if issue.repo.casefold() in exclude_repos:
+                skipped["excluded_repo"] += 1
                 continue
             if issue.repo_open_issue_count < MIN_REPO_OPEN_ISSUES:
                 skipped["repo_open_issues"] += 1
@@ -405,6 +421,7 @@ def _search_issue_candidates_rest(
     label: str | None = None,
     updated_days: int | None = None,
     repo_updated_days: int | None = None,
+    exclude_repos: set[str] = frozenset(),
     limit: int = 10,
     max_pages: int | None = None,
     page_size: int | None = None,
@@ -419,6 +436,7 @@ def _search_issue_candidates_rest(
         stars_min=effective_stars_min,
         label=label,
         updated_days=updated_days,
+        exclude_repos=exclude_repos,
     )
     repo_cache: dict[str, dict[str, Any]] = {}
     repo_activity_cache: dict[str, int] = {}
@@ -470,6 +488,7 @@ def _search_issue_candidates_rest(
                     repo_activity_cache=repo_activity_cache,
                     repo_open_issue_count_cache=repo_open_issue_count_cache,
                     repo_beginner_issue_count_cache=repo_beginner_issue_count_cache,
+                    exclude_repos=exclude_repos,
                     language=language,
                     stars_min=effective_stars_min,
                     repo_updated_days=repo_updated_days,
@@ -602,6 +621,7 @@ def _append_rest_candidates(
     repo_activity_cache: dict[str, int],
     repo_open_issue_count_cache: dict[str, int],
     repo_beginner_issue_count_cache: dict[str, int],
+    exclude_repos: set[str] = frozenset(),
     language: str | None,
     stars_min: int,
     repo_updated_days: int | None,
@@ -632,6 +652,9 @@ def _append_rest_candidates(
 
     for candidate in qualified:
         repo = candidate["repo"]
+        if repo.casefold() in exclude_repos:
+            skipped["excluded_repo"] += 1
+            continue
         item = candidate["item"]
         if (
             repo_updated_days is not None
@@ -762,6 +785,7 @@ def _build_issue_query(
     stars_min: int | None,
     label: str | None,
     updated_days: int | None,
+    exclude_repos: set[str] = frozenset(),
     sort_updated_desc: bool = False,
 ) -> str:
     parts = ["is:issue", "is:open", "archived:false", "-linked:pr", "no:assignee"]
@@ -776,6 +800,8 @@ def _build_issue_query(
     if updated_days is not None:
         cutoff = datetime.now(timezone.utc).date() - timedelta(days=updated_days)
         parts.append(f"updated:>={cutoff.isoformat()}")
+    for excluded in exclude_repos:
+        parts.append(f"-repo:{excluded}")
     if sort_updated_desc:
         parts.append("sort:updated-desc")
     return " ".join(parts)

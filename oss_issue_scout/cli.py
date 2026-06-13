@@ -45,6 +45,8 @@ def build_parser() -> argparse.ArgumentParser:
         choices=("default", "junior", "intermediate", "senior"),
         default="default",
     )
+    search_parser.add_argument("--exclude-repo", action="append", default=[],
+        help="exclude a repository (owner/name) from results; can be repeated")
     search_parser.add_argument(
         "--format",
         choices=("table", "markdown", "json"),
@@ -84,6 +86,7 @@ def _search_recommended(args: argparse.Namespace) -> list[ScoredIssue]:
         label=args.label,
         updated_days=args.updated_days,
         repo_updated_days=args.repo_updated_days,
+        exclude_repos=tuple(args.exclude_repo),
         limit=candidate_limit,
     )
     selected_results = _select_search_results(
@@ -106,6 +109,7 @@ def _search_recommended(args: argparse.Namespace) -> list[ScoredIssue]:
             label=args.label,
             updated_days=args.updated_days,
             repo_updated_days=args.repo_updated_days,
+            exclude_repos=tuple(args.exclude_repo),
             limit=MAX_CANDIDATE_LIMIT,
             max_pages=max_pages,
             page_size=RECOMMENDATION_SEARCH_PAGE_SIZE,
@@ -130,8 +134,10 @@ def _select_search_results(
     issues_by_url: dict[str, Issue],
     allow_low_scores: bool,
 ) -> list[ScoredIssue] | None:
+    exclude_lower = {repo.casefold() for repo in args.exclude_repo}
     for issue in search_result.issues:
-        issues_by_url.setdefault(issue.url, issue)
+        if issue.repo.casefold() not in exclude_lower:
+            issues_by_url.setdefault(issue.url, issue)
 
     scored_results = score_issues(list(issues_by_url.values()), args.preset)
     recommended_results = _select_results(
@@ -171,7 +177,8 @@ def _backfill_recommendations(
     args: argparse.Namespace,
     issues_by_url: dict[str, Issue],
 ) -> list[ScoredIssue]:
-    repos = _backfill_repos(issues_by_url.values())
+    exclude_lower = {repo.casefold() for repo in args.exclude_repo}
+    repos = _backfill_repos(issues_by_url.values(), exclude_repos=tuple(args.exclude_repo))
     if not repos:
         return []
 
@@ -181,10 +188,12 @@ def _backfill_recommendations(
                 args=args,
                 repo=repo,
                 known_issues=list(issues_by_url.values()),
+                issues_by_url=issues_by_url,
                 page=page,
             )
             for issue in issues:
-                issues_by_url.setdefault(issue.url, issue)
+                if issue.repo.casefold() not in exclude_lower:
+                    issues_by_url.setdefault(issue.url, issue)
 
             scored_results = score_issues(list(issues_by_url.values()), args.preset)
             recommended_results = _select_results(
@@ -204,12 +213,13 @@ def _backfill_recommendations(
     )
 
 
-def _backfill_repos(issues: Iterable[Issue]) -> list[str]:
+def _backfill_repos(issues: Iterable[Issue], *, exclude_repos: tuple[str, ...] = ()) -> list[str]:
+    exclude_lower = {repo.casefold() for repo in exclude_repos}
     repos: list[str] = []
     seen = set()
     for issue in issues:
         repo = issue.repo
-        if repo in seen:
+        if repo in seen or repo.casefold() in exclude_lower:
             continue
         seen.add(repo)
         repos.append(repo)
@@ -223,17 +233,19 @@ def _backfill_repo(
     args: argparse.Namespace,
     repo: str,
     known_issues: list[Issue],
+    issues_by_url: dict[str, Issue],
     page: int,
 ) -> list[Issue]:
     try:
         return backfill_issue_candidates(
             repo=repo,
-            known_issues=known_issues,
+            known_issues=list(issues_by_url.values()),
             language=args.language,
             stars_min=args.stars_min,
             label=args.label,
             updated_days=args.updated_days,
             repo_updated_days=args.repo_updated_days,
+            exclude_repos=tuple(args.exclude_repo),
             per_page=BACKFILL_PER_PAGE,
             page=page,
         )
